@@ -1,71 +1,121 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class Character : MonoBehaviour
 {
-    private CharacterController characterController;
-    private Animator animator;
+    [SerializeField] private Animator animator;
+    [SerializeField] private Bag bag;
 
-    [SerializeField] Joystick joystick;
-    [SerializeField] float sensitivity;
-    [SerializeField] float speedMove;
-    [SerializeField] private Transform TransformMain;
+    [SerializeField] private Joystick joystick;
+    [SerializeField] private float speedMove = 100;
+    [SerializeField] private float torqueSpeed = 20;
 
-    private Vector3 moveVector;
-    private float gravityForce;
+    private Rigidbody rigidbody;
+
+    private bool IsBagEmpty;
+    public bool IsCut;
+
+    public event Action<int> ChangeBambooValueEvent;
+
+    public int CurrentBambooValue { get => currentBambooValue;}
+    private int currentBambooValue;
 
     private void Start()
     {
-        gravityForce = 0;
-        characterController = GetComponent<CharacterController>();
-        animator = GetComponent<Animator>();
+        rigidbody = GetComponent<Rigidbody>();
+        bag.FullBagEvent += Bag_FullBagEvent;
+        bag.EmptyBagEvent += Bag_EmptyBagEvent;
+        IsBagEmpty = false;
+        IsCut = false;
+        currentBambooValue = 0;
     }
 
-    private void Update()
+    private void Bag_EmptyBagEvent()
+    {
+        IsBagEmpty = true;
+    }
+
+    private void OnDisable()
+    {
+        bag.FullBagEvent -= Bag_FullBagEvent;
+        bag.EmptyBagEvent -= Bag_EmptyBagEvent;
+    }
+
+    private void Bag_FullBagEvent()
+    {
+        animator.SetBool("Cut", false);
+    }
+
+    private void FixedUpdate()
     {
         Move();
-        Gravity();
     }
+
 
     private void Move()
     {
-        moveVector = Vector3.zero;
-        moveVector.x = joystick.Direction.x;
-        moveVector.z = joystick.Direction.y;
-
-        if (moveVector.x != 0 || moveVector.z != 0)
-        {
-            animator.SetBool("Move", true);
-        }
-        else
+        var vector = joystick.Direction;
+        if (vector.sqrMagnitude < 0.05f)
         {
             animator.SetBool("Move", false);
+            rigidbody.velocity = Vector3.zero;
+            return;
         }
+        
+        animator.SetBool("Move", true);
+        vector.Normalize();
+        var globalVector = new Vector3(vector.x, 0, vector.y);
+        rigidbody.AddForce(speedMove * Time.fixedDeltaTime * globalVector, ForceMode.Impulse);
 
-        if (Vector3.Angle(Vector3.forward, moveVector) > 1f || Vector3.Angle(Vector3.forward, moveVector) == 0)
-        {
-            Vector3 derect = Vector3.RotateTowards(TransformMain.forward, moveVector, speedMove, 0.0f);
-            TransformMain.rotation = Quaternion.LookRotation(derect);
-        }
-
-        moveVector.x = joystick.Direction.x * sensitivity;
-        moveVector.z = joystick.Direction.y * sensitivity;
-
-        moveVector.y = gravityForce;
-        characterController.Move(moveVector);
-        TransformMain.position = this.transform.position;
+        var angle = Vector3.SignedAngle(Vector3.forward, globalVector, Vector3.up);
+        var angularVelocity = angle * Vector3.up;
+        rigidbody.rotation = Quaternion.Euler(angularVelocity);
     }
 
-    private void Gravity()
+    private void OnTriggerEnter(Collider other)
     {
-        if (!characterController.isGrounded)
+        var field = other.gameObject.GetComponent<FieldPosition>();
+        if (field == null)
+            return;
+        IsCut = true;
+        animator.SetBool("Cut", true);
+    }
+
+    private void OnTriggerExit(Collider other)
+    {
+        var field = other.gameObject.GetComponent<FieldPosition>();
+        if (field == null)
+            return;
+        IsCut = false;
+        animator.SetBool("Cut", false);
+    }
+
+    public void AddBamboo()
+    {
+        currentBambooValue++;
+        ChangeBambooValueEvent?.Invoke(currentBambooValue);
+        bag.AddValue();
+        IsBagEmpty = false;
+    }
+
+    public void RemoveBamboo()
+    {
+        StartCoroutine(RemoveBambooCouratine());
+    }
+
+    private IEnumerator RemoveBambooCouratine()
+    {
+        yield return null;
+        
+        while (!IsBagEmpty)
         {
-            gravityForce -= 20f * Time.deltaTime;
-        }
-        else
-        {
-            gravityForce = -1f;
+            currentBambooValue--;
+            ChangeBambooValueEvent?.Invoke(currentBambooValue);
+            bag.RemoveValue();
+            yield return new WaitForSeconds(0.1f);
         }
     }
 }

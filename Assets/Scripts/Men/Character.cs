@@ -96,6 +96,10 @@ public class Character : MonoBehaviour
     public void AddBamboo()
     {
         currentBambooValue++;
+        if (currentBambooValue > 40)
+        {
+            currentBambooValue = 40;
+        }
         ChangeBambooValueEvent?.Invoke(currentBambooValue);
         bag.AddValue();
         IsBagEmpty = false;
@@ -113,9 +117,13 @@ public class Character : MonoBehaviour
         while (!IsBagEmpty)
         {
             currentBambooValue--;
+            if (currentBambooValue < 0)
+            {
+                currentBambooValue = 0;
+            }
             ChangeBambooValueEvent?.Invoke(currentBambooValue);
             bag.RemoveValue();
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.01f);
         }
     }
 }

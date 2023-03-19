@@ -6,35 +6,25 @@ public class Field : MonoBehaviour
 {
     [SerializeField] private Transform spawnerTranform;
     [SerializeField] private Bamboo bambooPrefab;
-    [Range(0,1)]
-    [SerializeField] private float fieldFull;
+    [SerializeField] private float timeToRise = 10f;
 
     private Bamboo[,] bambooObjects;
 
-    private float timeToRise = 10f;
-    private float timeToRiseOne;
-
     private void Start()
     {
-        timeToRiseOne = timeToRise / (spawnerTranform.localScale.z * spawnerTranform.localScale.x);
         bambooObjects = new Bamboo[(int)(spawnerTranform.localScale.z), (int)spawnerTranform.localScale.x];
-        StartCoroutine(SpawnBambooCouratine());
+        SpawnBambooForest();
     }
 
-    private IEnumerator SpawnBambooCouratine()
+    private void SpawnBambooForest()
     {
-        yield return null;
-
-        while (fieldFull < 0.95)
+        for (int i = 0; i < spawnerTranform.localScale.x; i++)
         {
-            int o = Random.Range(0, (int)spawnerTranform.localScale.x);
-            int p = Random.Range(0, (int)spawnerTranform.localScale.z);
-            if (SpawnBamboo(p, o))
+            for (int u = 0; u < spawnerTranform.localScale.z; u++)
             {
-                yield return new WaitForSeconds(timeToRiseOne);
+                SpawnBamboo(u, i);
             }
         }
-        yield return null;
     }
 
     public bool SpawnBamboo(int p, int o)
@@ -47,7 +37,6 @@ public class Field : MonoBehaviour
             bambooObjects[p, o] = Instantiate(bambooPrefab, pos, quaternion, this.transform);
             bambooObjects[p, o].SetPos(p, o);
             bambooObjects[p, o].OnDeadEvent += Field_OnDeadEvent;
-            fieldFull += 1 / (spawnerTranform.localScale.z * spawnerTranform.localScale.x);
             return true;
         }
         return false;
@@ -55,14 +44,14 @@ public class Field : MonoBehaviour
 
     private void Field_OnDeadEvent(Bamboo obj)
     {
+        bambooObjects[obj.p, obj.o].OnDeadEvent -= Field_OnDeadEvent;
         bambooObjects[obj.p, obj.o] = null;
-        fieldFull -= 1 / (spawnerTranform.localScale.z * spawnerTranform.localScale.x);
         StartCoroutine(SpawnOneBambooCouratine(obj.p, obj.o));
     }
 
     private IEnumerator SpawnOneBambooCouratine(int p, int o)
     {
-        yield return new WaitForSeconds(Random.Range(8f, 12f));
+        yield return new WaitForSeconds(Random.Range(timeToRise - timeToRise/4, timeToRise + timeToRise / 4));
         SpawnBamboo(p, o);
     }
 }

@@ -5,28 +5,27 @@ using UnityEngine;
 
 public class Bag : MonoBehaviour
 {
-    [Range(0,1)]
-    [SerializeField] private float bagFill;
     [SerializeField] private List<GameObject> bambooItems;
-
-    public event Action FullBagEvent;
-    public event Action EmptyBagEvent;
-
-    private int Max = 40;
-    private float oldValuebagFill;
+    
+    private float bagFill;
+    private int maxValue;
+    private float oldValueBagFill;
     private float oneItemValue;
+
+    public void SetMaxValue(int value)
+    {
+        maxValue = value;
+        SetBag();
+    }
 
     private void Start()
     {
-        bagFill = 0;
-        oldValuebagFill = bagFill;
         oneItemValue = 1 / bambooItems.Count;
-        SetBag();
     }
 
     private void Update()
     {
-        if (bagFill != oldValuebagFill)
+        if (bagFill != oldValueBagFill)
         {
             SetBag();
         }
@@ -35,7 +34,7 @@ public class Bag : MonoBehaviour
     private void SetBag()
     {
         float currentValue = bagFill;
-        oneItemValue = 1f / 20f;
+        oneItemValue = 1f / (float)bambooItems.Count;
         foreach (var item in bambooItems)
         {
             if (currentValue > 0)
@@ -48,25 +47,23 @@ public class Bag : MonoBehaviour
             }
             currentValue -= oneItemValue;
         }
-        oldValuebagFill = bagFill;
+        oldValueBagFill = bagFill;
     }
 
     public void AddValue()
     {
-        bagFill += 1f / (float)Max;
+        bagFill += 1f / (float)maxValue;
         if (bagFill > 1)
         {
-            FullBagEvent?.Invoke();
             bagFill = 1;
         }
     }
 
     public void RemoveValue()
     {
-        bagFill -= 1f / (float)Max;
+        bagFill -= 1f / (float)maxValue;
         if (bagFill < 0)
         {
-            EmptyBagEvent?.Invoke();
             bagFill = 0;
         }
     }

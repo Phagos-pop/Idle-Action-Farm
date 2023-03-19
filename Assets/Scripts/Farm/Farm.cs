@@ -41,7 +41,7 @@ public class Farm : MonoBehaviour
         {
             value--;
             MoneyChangeEvent?.Invoke(moneyForBamboo,transform.position);
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.05f);
         }
     }
 }

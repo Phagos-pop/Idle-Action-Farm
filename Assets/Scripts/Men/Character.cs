@@ -7,16 +7,17 @@ using UnityEngine;
 public class Character : MonoBehaviour
 {
     [SerializeField] private Animator animator;
-    [SerializeField] private Bag bag;
 
+    [SerializeField] private Bag bag;
+    [SerializeField] private Knife knife;
     [SerializeField] private Joystick joystick;
+
     [SerializeField] private float speedMove = 100;
-    [SerializeField] private float torqueSpeed = 20;
+    [SerializeField] private int bagMaxValue = 40;
 
     private Rigidbody rigidbody;
 
     private bool IsBagEmpty;
-    public bool IsCut;
 
     public event Action<int> ChangeBambooValueEvent;
 
@@ -26,27 +27,18 @@ public class Character : MonoBehaviour
     private void Start()
     {
         rigidbody = GetComponent<Rigidbody>();
-        bag.FullBagEvent += Bag_FullBagEvent;
-        bag.EmptyBagEvent += Bag_EmptyBagEvent;
-        IsBagEmpty = false;
-        IsCut = false;
         currentBambooValue = 0;
+        bag.SetMaxValue(bagMaxValue);
     }
 
-    private void Bag_EmptyBagEvent()
+    private void OnEnable()
     {
-        IsBagEmpty = true;
+        knife.OnCutEvent += Knife_OnCutEvent;
     }
 
     private void OnDisable()
     {
-        bag.FullBagEvent -= Bag_FullBagEvent;
-        bag.EmptyBagEvent -= Bag_EmptyBagEvent;
-    }
-
-    private void Bag_FullBagEvent()
-    {
-        animator.SetBool("Cut", false);
+        knife.OnCutEvent -= Knife_OnCutEvent;
     }
 
     private void FixedUpdate()
@@ -54,6 +46,10 @@ public class Character : MonoBehaviour
         Move();
     }
 
+    private void Knife_OnCutEvent()
+    {
+        AddBamboo();
+    }
 
     private void Move()
     {
@@ -80,7 +76,6 @@ public class Character : MonoBehaviour
         var field = other.gameObject.GetComponent<FieldPosition>();
         if (field == null)
             return;
-        IsCut = true;
         animator.SetBool("Cut", true);
     }
 
@@ -89,16 +84,16 @@ public class Character : MonoBehaviour
         var field = other.gameObject.GetComponent<FieldPosition>();
         if (field == null)
             return;
-        IsCut = false;
         animator.SetBool("Cut", false);
     }
 
-    public void AddBamboo()
+    private void AddBamboo()
     {
         currentBambooValue++;
-        if (currentBambooValue > 40)
+        if (currentBambooValue > bagMaxValue)
         {
-            currentBambooValue = 40;
+            currentBambooValue = bagMaxValue;
+            return;
         }
         ChangeBambooValueEvent?.Invoke(currentBambooValue);
         bag.AddValue();
@@ -119,7 +114,9 @@ public class Character : MonoBehaviour
             currentBambooValue--;
             if (currentBambooValue < 0)
             {
+                IsBagEmpty = true;
                 currentBambooValue = 0;
+                yield break;
             }
             ChangeBambooValueEvent?.Invoke(currentBambooValue);
             bag.RemoveValue();
